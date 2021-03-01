@@ -1,0 +1,180 @@
+# -*- mode: python -*-
+
+Import("env")
+Import("has_option")
+
+env = env.Clone()
+#env = env.Clone(
+#    LIBDEPS_NO_INHERIT=[
+#        '$BUILD_DIR/third_party/shim_allocator',
+#    ],
+#)
+
+tcmalloc_dir = env.Dir("dist")
+tcmalloc_src_dir = tcmalloc_dir.Dir("tcmalloc")
+
+if env.ToolchainIs('GCC'):
+    env.AppendUnique(
+        CXXFLAGS=[
+            '-Wno-attribute-alias',
+            '-Wno-sign-compare',
+            '-Wno-unused-function',
+            '-Wno-unused-result',
+            '-Wno-unused-variable',
+        ]
+    )
+elif env.ToolchainIs('clang'):
+    env.AppendUnique(
+        CXXFLAGS=[
+           '-Wno-deprecated-declarations',
+           '-Wno-sign-compare',
+           '-Wno-uninitialized',
+           '-Wno-unused-function',
+           '-Wno-unused-variable',
+        ]
+    )
+
+
+env.InjectThirdParty(libraries=['abseil-cpp'])
+
+env.Append(CPPPATH=[
+    tcmalloc_dir,
+])
+
+env.Library(
+    target='tcmalloc_logging',
+    source=env.File(['internal/logging.cc'], tcmalloc_src_dir),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_base',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_debugging_stacktrace',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+    ],
+)
+
+env.Library(
+    target='tcmalloc_memory_stats',
+    source=env.File(['internal/memory_stats.cc'], tcmalloc_src_dir),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+        'tcmalloc_logging',
+        'tcmalloc_util',
+    ],
+)
+
+env.Library(
+    target='tcmalloc_util',
+    source=env.File(['internal/util.cc'], tcmalloc_src_dir),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_base',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_time',
+        'tcmalloc_logging',
+    ],
+)
+
+env.Library(
+    target='tcmalloc_percpu',
+    source=env.File(
+        [
+            'internal/percpu.cc',
+            'internal/percpu_rseq_asm.S',
+            'internal/percpu_rseq_unsupported.cc',
+        ],
+        tcmalloc_src_dir
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_base',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_base_dynamic_annotations',
+        'tcmalloc_util',
+    ],
+)
+
+env.Library(
+    target='tcmalloc_environment',
+    source=env.File(
+        ['internal/environment.cc'],
+        tcmalloc_src_dir
+    ),
+)
+
+env.Library(
+    target='tcmalloc_mincore',
+    source=env.File(
+        ['internal/mincore.cc'],
+        tcmalloc_src_dir
+    ),
+)
+
+tcmalloc_deps = [
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_base',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_base_dynamic_annotations',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_debugging_leak_check',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_debugging_stacktrace',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_debugging_symbolize',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_types_optional',
+    'tcmalloc_common',
+    'tcmalloc_logging',
+    'tcmalloc_memory_stats',
+    'tcmalloc_percpu',
+]
+
+env.Library(
+    target="tcmalloc",
+    source=env.File(['tcmalloc.cc'], tcmalloc_src_dir),
+    LIBDEPS=tcmalloc_deps,
+)
+
+common_sources = [
+    'arena.cc',
+    'background.cc',
+    'central_freelist.cc',
+    'common.cc',
+    'cpu_cache.cc',
+    'experimental_56_size_class.cc',
+    'legacy_size_classes.cc',
+    'guarded_page_allocator.cc',
+    'huge_address_map.cc',
+    'huge_allocator.cc',
+    'huge_cache.cc',
+    'huge_page_aware_allocator.cc',
+    'page_allocator.cc',
+    'page_allocator_interface.cc',
+    'page_heap.cc',
+    'page_heap_allocator.h',
+    'pagemap.cc',
+    'parameters.cc',
+    'peak_heap_tracker.cc',
+    'sampler.cc',
+    'size_classes.cc',
+    'span.cc',
+    'stack_trace_table.cc',
+    'static_vars.cc',
+    'stats.cc',
+    'system-alloc.cc',
+    'thread_cache.cc',
+    'transfer_cache.cc',
+]
+
+common_deps = [
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_base',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_base_dynamic_annotations',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_debugging_internal',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_debugging_stacktrace',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_debugging_symbolize',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_hash',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_synchronization',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_time',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_types_optional',
+    'tcmalloc_environment',
+    'tcmalloc_logging',
+    'tcmalloc_mincore',
+    'tcmalloc_percpu',
+    'tcmalloc_util',
+]
+
+env.Library(
+    target="tcmalloc_common",
+    source=env.File(common_sources, tcmalloc_src_dir),
+    LIBDEPS=common_deps,
+)

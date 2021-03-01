@@ -288,10 +288,10 @@ env.CppUnitTest(
     ],
 )
 
-if env['MONGO_ALLOCATOR'] in ['tcmalloc', 'tcmalloc-experimental']:
+if env['MONGO_ALLOCATOR'] in ['tcmalloc-experimental', 'tcmalloc-gperf']:
     tcmspEnv = env.Clone()
 
-    if not use_system_version_of_library('tcmalloc'):
+    if not use_system_version_of_library('tcmalloc-gperf'):
 
         # Add in the include path for our vendored tcmalloc.
         tcmspEnv.InjectThirdParty('gperftools')

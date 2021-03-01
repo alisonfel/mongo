@@ -1,8 +1,22 @@
+# -*- mode: python -*-
+
 Import("env")
 
 env = env.Clone()
 
-env.InjectThirdParty(libraries=['abseil-cpp'])
+# We can't depend on the allocator if its tcmalloc as its depends
+# on us (abseil-cpp)
+if env['MONGO_ALLOCATOR'] in ['tcmalloc']:
+    env = env.Clone(
+        LIBDEPS_NO_INHERIT=['$BUILD_DIR/third_party/shim_allocator']
+    )
+
+try:
+    env['CXXFLAGS'].remove('-Wsign-compare')
+except ValueError:
+    pass
+
+abseil_root = env.Dir("abseil-cpp/absl").srcnode()
 
 env.Library(
     target="absl_hash",
@@ -18,16 +32,255 @@ env.Library(
         "abseil-cpp/absl/container/internal/raw_hash_set.cc",
     ],
     LIBDEPS=[
+        "absl_base_throw_delegate",
         "absl_hash",
-        "absl_throw_delegate",
     ]
 )
 
+abseil_base_dir = abseil_root.Dir("base")
+
 env.Library(
-    target="absl_throw_delegate",
-    source=[
-        "abseil-cpp/absl/base/internal/throw_delegate.cc",
-    ],
+    target="absl_base",
+    source=env.File(
+        [
+            "internal/cycleclock.cc",
+            "internal/raw_logging.cc",
+            "internal/spinlock.cc",
+            "internal/sysinfo.cc",
+            "internal/thread_identity.cc",
+            "internal/unscaledcycleclock.cc",
+        ],
+        abseil_base_dir,
+    ),
     LIBDEPS=[
+        "absl_base_dynamic_annotations",
+        "absl_base_spinlock_wait",
+    ],
+)
+
+env.Library(
+    target="absl_base_throw_delegate",
+    source=env.File(["internal/throw_delegate.cc"], abseil_base_dir)
+)
+
+env.Library(
+    target="absl_base_spinlock_wait",
+    source=env.File(["internal/spinlock_wait.cc"], abseil_base_dir)
+)
+
+env.Library(
+    target="absl_base_dynamic_annotations",
+    source=env.File(["dynamic_annotations.cc"], abseil_base_dir)
+)
+
+env.Library(
+    target="absl_base_malloc_internal",
+    source=env.File(["internal/low_level_alloc.cc"], abseil_base_dir),
+    LIBDEPS=[
+        "absl_base",
+        "absl_base_dynamic_annotations",
+        "absl_base_spinlock_wait",
+    ],
+)
+
+abseil_debugging_dir = abseil_root.Dir("debugging")
+
+env.Library(
+    target="absl_debugging_leak_check",
+    source=env.File(["leak_check.cc"], abseil_debugging_dir)
+)
+
+env.Library(
+    target="absl_debugging_stacktrace",
+    source=env.File(["stacktrace.cc"], abseil_debugging_dir),
+    LIBDEPS=[
+        "absl_base",
+        "absl_debugging_internal",
+    ],
+)
+
+env.Library(
+    target="absl_debugging_symbolize",
+    source=env.File(["symbolize.cc"], abseil_debugging_dir),
+    LIBDEPS=[
+        "absl_base",
+        "absl_base_malloc_internal",
+        "absl_debugging_demangle_internal",
+        "absl_debugging_internal",
+    ],
+)
+
+env.Library(
+    target="absl_debugging_internal",
+    source=env.File(
+        [
+            "internal/address_is_readable.cc",
+            "internal/elf_mem_image.cc",
+            "internal/vdso_support.cc"
+        ],
+        abseil_debugging_dir,
+    ),
+    LIBDEPS=[
+        "absl_base",
+        "absl_base_dynamic_annotations"
+    ],
+)
+
+env.Library(
+    target="absl_debugging_demangle_internal",
+    source=env.File(["internal/demangle.cc"], abseil_debugging_dir),
+    LIBDEPS=["absl_base"],
+)
+
+abseil_memory_dir = abseil_root.Dir("memory")
+env.Append(CPPPATH=[abseil_memory_dir])
+
+abseil_strings_dir = abseil_root.Dir("strings")
+env.Append(CPPPATH=[abseil_strings_dir])
+
+env.Library(
+    target="absl_strings",
+    source=env.File(
+        [
+            "ascii.cc",
+            "charconv.cc",
+            "escaping.cc",
+            "internal/charconv_bigint.cc",
+            "internal/charconv_parse.cc",
+            "internal/memutil.cc",
+            "match.cc",
+            "numbers.cc",
+            "str_cat.cc",
+            "str_replace.cc",
+            "str_split.cc",
+            "string_view.cc",
+            "substitute.cc",
+        ],
+        abseil_strings_dir
+    ),
+    LIBDEPS=[
+        "absl_base",
+        "absl_base_throw_delegate",
+        "absl_numeric_int128",
+    ],
+)
+
+abseil_numeric_dir = abseil_root.Dir("numeric")
+env.Append(CPPPATH=[abseil_memory_dir])
+
+env.Library(
+    target="absl_numeric_int128",
+    source=env.File(["int128.cc"], abseil_numeric_dir)
+)
+
+abseil_synchronization_dir = abseil_root.Dir("synchronization")
+
+env.Library(
+    target="absl_synchronization",
+    source=env.File(
+        [
+            "barrier.cc",
+            "blocking_counter.cc",
+            "internal/create_thread_identity.cc",
+            "internal/per_thread_sem.cc",
+            "internal/waiter.cc",
+            "notification.cc",
+            "mutex.cc",
+        ],
+        abseil_synchronization_dir
+    ),
+    LIBDEPS=[
+        "absl_base",
+        "absl_base_dynamic_annotations",
+        "absl_base_malloc_internal",
+        "absl_debugging_stacktrace",
+        "absl_debugging_symbolize",
+        "absl_synchronization_graphcycles_internal",
+        "absl_time",
+    ],
+)
+
+env.Library(
+    target="absl_synchronization_graphcycles_internal",
+    source=env.File(["internal/graphcycles.cc"], abseil_synchronization_dir),
+    LIBDEPS = ["absl_base_malloc_internal"],
+)
+
+
+abseil_time_dir = abseil_root.Dir("time")
+abseil_time_cctz_dir = abseil_time_dir.Dir("internal/cctz")
+
+env.Library(
+    target="absl_time",
+    source=env.File(
+        [
+            "civil_time.cc",
+            "clock.cc",
+            "duration.cc",
+            "format.cc",
+            "time.cc",
+        ],
+        abseil_time_dir
+    ),
+    LIBDEPS=[
+        "absl_base",
+        "absl_debugging_stacktrace",
+        "absl_debugging_symbolize",
+        "absl_numeric_int128",
+        "absl_strings",
+        "absl_time_cctz_civil_time",
+        "absl_time_cctz_time_zone",
+    ],
+)
+
+
+env.Library(
+    target="absl_time_cctz_civil_time",
+    source=env.File(["src/civil_time_detail.cc"], abseil_time_cctz_dir),
+)
+
+env.Library(
+    target="absl_time_cctz_time_zone",
+    source=env.File(
+        [
+            "src/time_zone_fixed.cc",
+            "src/time_zone_format.cc",
+            "src/time_zone_if.cc",
+            "src/time_zone_impl.cc",
+            "src/time_zone_info.cc",
+            "src/time_zone_libc.cc",
+            "src/time_zone_lookup.cc",
+            "src/time_zone_posix.cc",
+            "src/zone_info_source.cc",
+        ],
+        abseil_time_cctz_dir
+    ),
+    LIBDEPS=[
+        "absl_time_cctz_civil_time",
+    ],
+)
+
+abseil_types_dir = abseil_root.Dir("types")
+abseil_type_env = env.Clone()
+abseil_type_env.AppendUnique(CXXFLAGS=["-fexceptions"])
+abseil_type_env.Append(CPPPATH=[
+        abseil_root.Dir("utility"),
+        abseil_root.Dir("meta"),
+    ]
+)
+
+abseil_type_env.Library(
+    target="absl_types_optional",
+    source=env.File(["optional.cc"], abseil_types_dir),
+    LIBDEPS=[
+        "absl_types_bad_optional_access",
+    ]
+)
+
+abseil_type_env.Library(
+    target="absl_types_bad_optional_access",
+    source=env.File(["bad_optional_access.cc"], abseil_types_dir),
+    LIBDEPS=[
+        "absl_base",
     ]
 )
