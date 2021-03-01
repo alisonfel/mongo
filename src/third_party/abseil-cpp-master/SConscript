@@ -4,33 +4,33 @@ Import("env")
 
 env = env.Clone()
 
-# We can't depend on the allocator if its tcmalloc as its depends
-# on us (abseil-cpp)
-if env['MONGO_ALLOCATOR'] in ['tcmalloc']:
-    env = env.Clone(
-        LIBDEPS_NO_INHERIT=['$BUILD_DIR/third_party/shim_allocator']
-    )
+abseilSuffix = '-upstream'
 
 try:
     env['CXXFLAGS'].remove('-Wsign-compare')
 except ValueError:
     pass
 
-abseil_root = env.Dir("abseil-cpp/absl").srcnode()
+abseil_root = env.Dir('abseil-cpp' + abseilSuffix + '/absl').srcnode()
+
+abseil_hash_dir = abseil_root.Dir("hash")
 
 env.Library(
     target="absl_hash",
-    source=[
-        "abseil-cpp/absl/hash/internal/city.cc",
-        "abseil-cpp/absl/hash/internal/hash.cc",
-    ]
+    source=env.File(
+        [
+            "internal/city.cc",
+            "internal/hash.cc",
+        ],
+        abseil_hash_dir
+    )
 )
+
+abseil_container_dir = abseil_root.Dir("container")
 
 env.Library(
     target="absl_container",
-    source=[
-        "abseil-cpp/absl/container/internal/raw_hash_set.cc",
-    ],
+    source=env.File(["internal/raw_hash_set.cc"], abseil_container_dir),
     LIBDEPS=[
         "absl_base_throw_delegate",
         "absl_hash",

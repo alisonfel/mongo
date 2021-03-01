@@ -4,11 +4,6 @@ Import("env")
 Import("has_option")
 
 env = env.Clone()
-#env = env.Clone(
-#    LIBDEPS_NO_INHERIT=[
-#        '$BUILD_DIR/third_party/shim_allocator',
-#    ],
-#)
 
 tcmalloc_dir = env.Dir("dist")
 tcmalloc_src_dir = tcmalloc_dir.Dir("tcmalloc")
