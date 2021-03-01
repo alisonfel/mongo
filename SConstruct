@@ -77,7 +77,7 @@ def use_system_version_of_library(name):
 # add a new C++ library dependency that may be shimmed out to the system, add it to the below
 # list.
 def using_system_version_of_cxx_libraries():
-    cxx_library_names = ["tcmalloc", "boost"]
+    cxx_library_names = ["tcmalloc", "boost", "tcmalloc-gperf"]
     return True in [use_system_version_of_library(x) for x in cxx_library_names]
 
 def make_variant_dir_generator():
@@ -290,7 +290,7 @@ add_option('sanitize-coverage',
 )
 
 add_option('allocator',
-    choices=["auto", "system", "tcmalloc", "tcmalloc-experimental"],
+    choices=["auto", "system", "tcmalloc", "tcmalloc-experimental", "tcmalloc-gperf"],
     default="auto",
     help='allocator to use (use "auto" for best choice for current platform)',
     type='choice',
@@ -351,6 +351,7 @@ for pack in [
     ('snappy',),
     ('stemmer',),
     ('tcmalloc',),
+    ('tcmalloc-gperf',),
     ('libunwind',),
     ('valgrind',),
     ('wiredtiger',),
@@ -1454,8 +1455,9 @@ env['TARGET_OS_FAMILY'] = 'posix' if env.TargetOSIs('posix') else env.GetTargetO
 if get_option('allocator') == "auto":
     # using an allocator besides system on android would require either fixing or disabling
     # gperftools on android
-    if env.TargetOSIs('windows') or \
-       env.TargetOSIs('linux') and not env.TargetOSIs('android'):
+    if env.TargetOSIs('windows'):
+        env['MONGO_ALLOCATOR'] = "tcmalloc-gperf"
+    elif env.TargetOSIs('linux') and not env.TargetOSIs('android'):
         env['MONGO_ALLOCATOR'] = "tcmalloc"
     else:
         env['MONGO_ALLOCATOR'] = "system"
@@ -3223,7 +3225,7 @@ def doConfigure(myenv):
         if using_lsan:
             env.FatalError("Please use --sanitize=address instead of --sanitize=leak")
 
-        if using_asan and env['MONGO_ALLOCATOR'] in ['tcmalloc', 'tcmalloc-experimental']:
+        if using_asan and env['MONGO_ALLOCATOR'] in ['tcmalloc', 'tcmalloc-experimental', 'tcmalloc-gperf']:
             # There are multiply defined symbols between the sanitizer and
             # our vendorized tcmalloc.
             env.FatalError("Cannot use --sanitize=address with tcmalloc")
@@ -4031,8 +4033,8 @@ def doConfigure(myenv):
 
     # 'tcmalloc' needs to be the last library linked. Please, add new libraries before this
     # point.
-    if myenv['MONGO_ALLOCATOR'] == 'tcmalloc':
-        if use_system_version_of_library('tcmalloc'):
+    if myenv['MONGO_ALLOCATOR'] == 'tcmalloc' or myenv['MONGO_ALLOCATOR'] == 'tcmalloc-gperf':
+        if use_system_version_of_library('tcmalloc-gperf') or use_system_version_of_library('tcmalloc'):
             conf.FindSysLibDep("tcmalloc", ["tcmalloc"])
     elif myenv['MONGO_ALLOCATOR'] in ['system', 'tcmalloc-experimental']:
         pass
