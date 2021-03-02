@@ -290,7 +290,7 @@ add_option('sanitize-coverage',
 )
 
 add_option('allocator',
-    choices=["auto", "system", "tcmalloc", "tcmalloc-experimental", "tcmalloc-gperf"],
+    choices=["auto", "system", "tcmalloc", "tcmalloc-legacy", "tcmalloc-experimental", "tcmalloc-gperf"],
     default="auto",
     help='allocator to use (use "auto" for best choice for current platform)',
     type='choice',
@@ -3225,7 +3225,7 @@ def doConfigure(myenv):
         if using_lsan:
             env.FatalError("Please use --sanitize=address instead of --sanitize=leak")
 
-        if using_asan and env['MONGO_ALLOCATOR'] in ['tcmalloc', 'tcmalloc-experimental', 'tcmalloc-gperf']:
+        if using_asan and env['MONGO_ALLOCATOR'] in ['tcmalloc', 'tcmalloc-legacy', 'tcmalloc-experimental', 'tcmalloc-gperf']:
             # There are multiply defined symbols between the sanitizer and
             # our vendorized tcmalloc.
             env.FatalError("Cannot use --sanitize=address with tcmalloc")
@@ -4033,7 +4033,7 @@ def doConfigure(myenv):
 
     # 'tcmalloc' needs to be the last library linked. Please, add new libraries before this
     # point.
-    if myenv['MONGO_ALLOCATOR'] == 'tcmalloc' or myenv['MONGO_ALLOCATOR'] == 'tcmalloc-gperf':
+    if myenv['MONGO_ALLOCATOR'] in ['tcmalloc', 'tcmalloc-gperf', 'tcmalloc-legacy']:
         if use_system_version_of_library('tcmalloc-gperf') or use_system_version_of_library('tcmalloc'):
             conf.FindSysLibDep("tcmalloc", ["tcmalloc"])
     elif myenv['MONGO_ALLOCATOR'] in ['system', 'tcmalloc-experimental']:

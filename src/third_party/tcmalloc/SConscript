@@ -36,6 +36,8 @@ elif env.ToolchainIs('clang'):
         ]
     )
 
+if env['MONGO_ALLOCATOR'] == 'tcmalloc-legacy':
+    env.AppendUnique(CCFLAGS=['-DTCMALLOC_DEPRECATED_PERTHREAD'])
 
 env.InjectThirdParty(libraries=['abseil-cpp'])
 
