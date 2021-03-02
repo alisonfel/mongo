@@ -7,7 +7,7 @@ env = env.Clone()
 abseilSuffix = '-upstream'
 
 try:
-    env['CXXFLAGS'].remove('-Wsign-compare')
+    env['CCFLAGS'].remove('-Wsign-compare')
 except ValueError:
     pass
 
@@ -23,7 +23,23 @@ env.Library(
             "internal/hash.cc",
         ],
         abseil_hash_dir
-    )
+    ),
+    LIBDEPS=[
+        "absl_hash_wyhash",
+    ],
+)
+
+env.Library(
+    target="absl_hash_wyhash",
+    source=env.File(
+        [
+            "internal/wyhash.cc",
+        ],
+        abseil_hash_dir
+    ),
+    LIBDEPS=[
+        "absl_numeric_int128",
+    ],
 )
 
 abseil_container_dir = abseil_root.Dir("container")
@@ -44,7 +60,6 @@ env.Library(
     source=env.File(
         [
             "internal/cycleclock.cc",
-            "internal/raw_logging.cc",
             "internal/spinlock.cc",
             "internal/sysinfo.cc",
             "internal/thread_identity.cc",
@@ -53,7 +68,7 @@ env.Library(
         abseil_base_dir,
     ),
     LIBDEPS=[
-        "absl_base_dynamic_annotations",
+        "absl_base_raw_logging_internal",
         "absl_base_spinlock_wait",
     ],
 )
@@ -69,19 +84,27 @@ env.Library(
 )
 
 env.Library(
-    target="absl_base_dynamic_annotations",
-    source=env.File(["dynamic_annotations.cc"], abseil_base_dir)
-)
-
-env.Library(
     target="absl_base_malloc_internal",
     source=env.File(["internal/low_level_alloc.cc"], abseil_base_dir),
     LIBDEPS=[
         "absl_base",
-        "absl_base_dynamic_annotations",
         "absl_base_spinlock_wait",
     ],
 )
+
+env.Library(
+    target="absl_base_raw_logging_internal",
+    source=env.File(["internal/raw_logging.cc"], abseil_base_dir),
+    LIBDEPS=[
+        "absl_base_log_severity",
+    ],
+)
+
+env.Library(
+    target="absl_base_log_severity",
+    source=env.File(["log_severity.cc"], abseil_base_dir),
+)
+
 
 abseil_debugging_dir = abseil_root.Dir("debugging")
 
@@ -122,7 +145,6 @@ env.Library(
     ),
     LIBDEPS=[
         "absl_base",
-        "absl_base_dynamic_annotations"
     ],
 )
 
@@ -162,6 +184,41 @@ env.Library(
         "absl_base",
         "absl_base_throw_delegate",
         "absl_numeric_int128",
+        "absl_strings_internal",
+    ],
+)
+
+env.Library(
+    target="absl_strings_internal",
+    source=env.File(
+        [
+            "internal/escaping.cc",
+            "internal/ostringstream.cc",
+            "internal/utf8.cc",
+        ],
+        abseil_strings_dir
+    ),
+    LIBDEPS=[
+        "absl_base_raw_logging_internal",
+    ],
+)
+
+env.Library(
+    target="absl_strings_str_format",
+    source=env.File(
+        [
+            "internal/str_format/arg.cc",
+            "internal/str_format/bind.cc",
+            "internal/str_format/extension.cc",
+            "internal/str_format/float_conversion.cc",
+            "internal/str_format/output.cc",
+            "internal/str_format/parser.cc",
+        ],
+        abseil_strings_dir
+    ),
+    LIBDEPS=[
+        "absl_numeric_int128",
+        "absl_strings",
     ],
 )
 
@@ -191,7 +248,6 @@ env.Library(
     ),
     LIBDEPS=[
         "absl_base",
-        "absl_base_dynamic_annotations",
         "absl_base_malloc_internal",
         "absl_debugging_stacktrace",
         "absl_debugging_symbolize",
@@ -266,14 +322,6 @@ abseil_type_env.AppendUnique(CXXFLAGS=["-fexceptions"])
 abseil_type_env.Append(CPPPATH=[
         abseil_root.Dir("utility"),
         abseil_root.Dir("meta"),
-    ]
-)
-
-abseil_type_env.Library(
-    target="absl_types_optional",
-    source=env.File(["optional.cc"], abseil_types_dir),
-    LIBDEPS=[
-        "absl_types_bad_optional_access",
     ]
 )
 
