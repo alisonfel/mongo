@@ -136,7 +136,6 @@ tcmalloc_deps = [
     '$BUILD_DIR/third_party/abseil-cpp-master/absl_debugging_stacktrace',
     '$BUILD_DIR/third_party/abseil-cpp-master/absl_debugging_symbolize',
     '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
-    '$BUILD_DIR/third_party/abseil-cpp-master/absl_types_optional',
     'tcmalloc_common',
     'tcmalloc_experiment',
     'tcmalloc_logging',

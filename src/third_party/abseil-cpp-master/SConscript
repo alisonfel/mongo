@@ -11,7 +11,7 @@ try:
 except ValueError:
     pass
 
-abseil_root = env.Dir('abseil-cpp' + abseilSuffix + '/absl').srcnode()
+abseil_root = env.Dir('abseil-cpp' + abseilSuffix + '/absl')
 
 abseil_hash_dir = abseil_root.Dir("hash")
 
