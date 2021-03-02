@@ -342,7 +342,7 @@ abseilEnv = env.Clone()
 
 # We can't depend on the allocator if we are using tcmalloc as its depends
 # on us (abseil-cpp)
-if abseilEnv['MONGO_ALLOCATOR'] in ['tcmalloc']:
+if abseilEnv['MONGO_ALLOCATOR'] in ['tcmalloc', 'tcmalloc-legacy']:
     abseilEnv = abseilEnv.Clone(
         LIBDEPS_NO_INHERIT=['$BUILD_DIR/third_party/shim_allocator']
     )
@@ -471,7 +471,7 @@ tcmallocEnv = env.Clone(
         '$BUILD_DIR/third_party/shim_allocator',
     ],
 )
-if tcmallocEnv['MONGO_ALLOCATOR'] in ["tcmalloc"]:
+if tcmallocEnv['MONGO_ALLOCATOR'] in ["tcmalloc", "tcmalloc-legacy"]:
     if use_system_version_of_library("tcmalloc"):
         tcmallocEnv = tcmallocEnv.Clone(
             SYSLIBDEPS=[
