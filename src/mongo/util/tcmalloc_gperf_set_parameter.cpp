@@ -33,9 +33,8 @@
 
 #include "mongo/platform/basic.h"
 
-#include <absl/types/optional.h>
 #include <algorithm>
-#include <tcmalloc/malloc_extension.h>
+#include <gperftools/malloc_extension.h>
 #include <valgrind/valgrind.h>
 
 #include "mongo/base/init.h"
@@ -49,15 +48,26 @@
 
 namespace mongo {
 namespace {
+constexpr auto kMaxTotalThreadCacheBytesPropertyName = "tcmalloc.max_total_thread_cache_bytes"_sd;
+constexpr auto kAggressiveMemoryDecommitPropertyName = "tcmalloc.aggressive_memory_decommit"_sd;
 
 StatusWith<size_t> getProperty(StringData propname) {
-    absl::optional<size_t> prop;
-    prop = tcmalloc::MallocExtension::GetNumericProperty(propname.toString().c_str());
-    if (!prop.has_value()) {
+    size_t value;
+    if (!MallocExtension::instance()->GetNumericProperty(propname.toString().c_str(), &value)) {
         return {ErrorCodes::InternalError,
                 str::stream() << "Failed to retreive tcmalloc prop: " << propname};
     }
-    return prop.value();
+    return value;
+}
+
+Status setProperty(StringData propname, size_t value) {
+    if (!RUNNING_ON_VALGRIND) {
+        if (!MallocExtension::instance()->SetNumericProperty(propname.toString().c_str(), value)) {
+            return {ErrorCodes::InternalError,
+                    str::stream() << "Failed to set internal tcmalloc property " << propname};
+        }
+    }
+    return Status::OK();
 }
 
 StatusWith<size_t> validateTCMallocValue(StringData name, const BSONElement& newValueElement) {
@@ -83,6 +93,34 @@ StatusWith<size_t> validateTCMallocValue(StringData name, const BSONElement& new
 
 }  // namespace
 
+#define TCMALLOC_SP_METHODS(cls)                                                     \
+    void TCMalloc##cls##ServerParameter::append(                                     \
+        OperationContext*, BSONObjBuilder& b, const std::string& name) {             \
+        auto swValue = getProperty(k##cls##PropertyName);                            \
+        if (swValue.isOK()) {                                                        \
+            b.appendNumber(name, static_cast<long long>(swValue.getValue()));        \
+        }                                                                            \
+    }                                                                                \
+    Status TCMalloc##cls##ServerParameter::set(const BSONElement& newValueElement) { \
+        auto swValue = validateTCMallocValue(name(), newValueElement);               \
+        if (!swValue.isOK()) {                                                       \
+            return swValue.getStatus();                                              \
+        }                                                                            \
+        return setProperty(k##cls##PropertyName, swValue.getValue());                \
+    }                                                                                \
+    Status TCMalloc##cls##ServerParameter::setFromString(const std::string& str) {   \
+        size_t value;                                                                \
+        Status status = NumberParser{}(str, &value);                                 \
+        if (!status.isOK()) {                                                        \
+            return status;                                                           \
+        }                                                                            \
+        return setProperty(k##cls##PropertyName, value);                             \
+    }
+
+TCMALLOC_SP_METHODS(MaxTotalThreadCacheBytes)
+TCMALLOC_SP_METHODS(AggressiveMemoryDecommit)
+#undef TCMALLOC_SP_METHODS
+
 namespace {
 
 MONGO_INITIALIZER_GENERAL(TcmallocConfigurationDefaults, (), ("BeginStartupOptionHandling"))
@@ -100,7 +138,7 @@ MONGO_INITIALIZER_GENERAL(TcmallocConfigurationDefaults, (), ("BeginStartupOptio
         (systemMemorySizeMB / 8) * 1024 * 1024;  // 1/8 of system memory in bytes
     size_t cacheSize = std::min(defaultTcMallocCacheSize, derivedTcMallocCacheSize);
 
-    tcmalloc::MallocExtension::SetMaxTotalThreadCacheBytes(cacheSize);
+    uassertStatusOK(setProperty(kMaxTotalThreadCacheBytesPropertyName, cacheSize));
 }
 
 }  // namespace
@@ -109,12 +147,12 @@ MONGO_INITIALIZER_GENERAL(TcmallocConfigurationDefaults, (), ("BeginStartupOptio
 void TCMallocReleaseRateServerParameter::append(OperationContext*,
                                                 BSONObjBuilder& builder,
                                                 const std::string& fieldName) {
-    auto value = tcmalloc::MallocExtension::GetBackgroundReleaseRate();
+    auto value = MallocExtension::instance()->GetMemoryReleaseRate();
     builder.append(fieldName, value);
 }
 
 Status TCMallocReleaseRateServerParameter::setFromString(const std::string& tcmalloc_release_rate) {
-    size_t value;
+    double value;
     Status status = NumberParser{}(tcmalloc_release_rate, &value);
     if (!status.isOK()) {
         return status;
@@ -125,10 +163,7 @@ Status TCMallocReleaseRateServerParameter::setFromString(const std::string& tcma
                               << tcmalloc_release_rate};
     }
 
-    tcmalloc::MallocExtension::BytesPerSecond releaseRate =
-        static_cast<tcmalloc::MallocExtension::BytesPerSecond>(value);
-    ;
-    tcmalloc::MallocExtension::SetBackgroundReleaseRate(releaseRate);
+    MallocExtension::instance()->SetMemoryReleaseRate(value);
     return Status::OK();
 }
 

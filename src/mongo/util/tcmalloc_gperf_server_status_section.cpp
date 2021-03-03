@@ -35,8 +35,7 @@
 
 #include "mongo/platform/basic.h"
 
-#include <absl/types/optional.h>
-#include <tcmalloc/malloc_extension.h>
+#include <gperftools/malloc_extension.h>
 
 #include <valgrind/valgrind.h>
 
@@ -47,6 +46,18 @@
 #include "mongo/util/tcmalloc_parameters_gen.h"
 
 namespace mongo {
+
+// TODO: Remove these implementations and the associated IDL definition in 4.3.
+void TCMallocEnableMarkThreadTemporarilyIdle::append(OperationContext*,
+                                                     BSONObjBuilder&,
+                                                     const std::string&) {}
+
+Status TCMallocEnableMarkThreadTemporarilyIdle::setFromString(const std::string&) {
+    return Status(ErrorCodes::BadValue,
+                  "tcmallocEnableMarkThreadTemporarilyIdle has been removed. Setting this "
+                  "parameter has no effect and it will be removed in a future version of "
+                  "MongoDB.");
+}
 
 namespace {
 
@@ -71,8 +82,9 @@ public:
 
         BSONObjBuilder builder;
 
-        // For a list of properties see:
-        // https://github.com/google/tcmalloc/blob/master/tcmalloc/malloc_extension.h
+        // For a list of properties see the "Generic Tcmalloc Status" section of
+        // http://google-perftools.googlecode.com/svn/trunk/doc/tcmalloc.html and
+        // http://code.google.com/p/gperftools/source/browse/src/gperftools/malloc_extension.h
         {
             BSONObjBuilder sub(builder.subobjStart("generic"));
             appendNumericPropertyIfAvailable(
@@ -94,30 +106,48 @@ public:
             // Not including tcmalloc.slack_bytes since it is deprecated.
 
             // Calculate total free bytes, *excluding the page heap*
-            absl::optional<size_t> central =
-                tcmalloc::MallocExtension::GetNumericProperty("tcmalloc.central_cache_free");
-            absl::optional<size_t> transfer =
-                tcmalloc::MallocExtension::GetNumericProperty("tcmalloc.transfer_cache_free");
-            absl::optional<size_t> thread =
-                tcmalloc::MallocExtension::GetNumericProperty("tcmalloc.thread_cache_free_bytes");
-            absl::optional<size_t> cpu =
-                tcmalloc::MallocExtension::GetNumericProperty("tcmalloc.cpu_free");
-            if (central.has_value() && transfer.has_value() && thread.has_value() &&
-                cpu.has_value()) {
+            size_t central;
+            size_t transfer;
+            size_t thread;
+            if (MallocExtension::instance()->GetNumericProperty("tcmalloc.central_cache_free_bytes",
+                                                                &central) &&
+                MallocExtension::instance()->GetNumericProperty(
+                    "tcmalloc.transfer_cache_free_bytes", &transfer) &&
+                MallocExtension::instance()->GetNumericProperty("tcmalloc.thread_cache_free_bytes",
+                                                                &thread)) {
                 sub.appendNumber("total_free_bytes",
-                                 static_cast<long long>(central.value() + transfer.value() +
-                                                        thread.value() + cpu.value()));
+                                 static_cast<long long>(central + transfer + thread));
             }
             appendNumericPropertyIfAvailable(
-                sub, "central_cache_free_bytes", "tcmalloc.central_cache_free");
+                sub, "central_cache_free_bytes", "tcmalloc.central_cache_free_bytes");
             appendNumericPropertyIfAvailable(
-                sub, "transfer_cache_free_bytes", "tcmalloc.transfer_cache_free");
+                sub, "transfer_cache_free_bytes", "tcmalloc.transfer_cache_free_bytes");
             appendNumericPropertyIfAvailable(
-                sub, "thread_cache_free_bytes", "tcmalloc.thread_cache_free");
+                sub, "thread_cache_free_bytes", "tcmalloc.thread_cache_free_bytes");
+            appendNumericPropertyIfAvailable(
+                sub, "aggressive_memory_decommit", "tcmalloc.aggressive_memory_decommit");
 
-            tcmalloc::MallocExtension::BytesPerSecond tcmallocReleaseRate =
-                tcmalloc::MallocExtension::GetBackgroundReleaseRate();
-            sub.appendNumber("release_rate", static_cast<long long>(tcmallocReleaseRate));
+            appendNumericPropertyIfAvailable(
+                sub, "pageheap_committed_bytes", "tcmalloc.pageheap_committed_bytes");
+            appendNumericPropertyIfAvailable(
+                sub, "pageheap_scavenge_count", "tcmalloc.pageheap_scavenge_count");
+            appendNumericPropertyIfAvailable(
+                sub, "pageheap_commit_count", "tcmalloc.pageheap_commit_count");
+            appendNumericPropertyIfAvailable(
+                sub, "pageheap_total_commit_bytes", "tcmalloc.pageheap_total_commit_bytes");
+            appendNumericPropertyIfAvailable(
+                sub, "pageheap_decommit_count", "tcmalloc.pageheap_decommit_count");
+            appendNumericPropertyIfAvailable(
+                sub, "pageheap_total_decommit_bytes", "tcmalloc.pageheap_total_decommit_bytes");
+            appendNumericPropertyIfAvailable(
+                sub, "pageheap_reserve_count", "tcmalloc.pageheap_reserve_count");
+            appendNumericPropertyIfAvailable(
+                sub, "pageheap_total_reserve_bytes", "tcmalloc.pageheap_total_reserve_bytes");
+            appendNumericPropertyIfAvailable(
+                sub, "spinlock_total_delay_ns", "tcmalloc.spinlock_total_delay_ns");
+
+            auto tcmallocReleaseRate = MallocExtension::instance()->GetMemoryReleaseRate();
+            sub.appendNumber("release_rate", tcmallocReleaseRate);
 
 #if MONGO_HAVE_GPERFTOOLS_SIZE_CLASS_STATS
             if (verbosity >= 2) {
@@ -127,7 +157,7 @@ public:
 
                 // Size classes and page heap info is dumped in 1 call so that the performance
                 // sensitive tcmalloc page heap lock is only taken once
-                tcmalloc::MallocExtension::SizeClasses(
+                MallocExtension::instance()->SizeClasses(
                     &builders, appendSizeClassInfo, appendPageHeapInfo);
 
                 builders.first.done();
@@ -135,8 +165,9 @@ public:
             }
 #endif
 
-            std::string stats = tcmalloc::MallocExtension::GetStats();
-            builder.append("formattedString", stats);
+            char buffer[4096];
+            MallocExtension::instance()->GetStats(buffer, sizeof buffer);
+            builder.append("formattedString", buffer);
         }
 
         return builder.obj();
@@ -146,9 +177,9 @@ private:
     static void appendNumericPropertyIfAvailable(BSONObjBuilder& builder,
                                                  StringData bsonName,
                                                  const char* property) {
-        absl::optional<size_t> prop = tcmalloc::MallocExtension::GetNumericProperty(property);
-        if (prop.has_value())
-            builder.appendNumber(bsonName, static_cast<long long>(prop.value()));
+        size_t value;
+        if (MallocExtension::instance()->GetNumericProperty(property, &value))
+            builder.appendNumber(bsonName, static_cast<long long>(value));
     }
 
 #if MONGO_HAVE_GPERFTOOLS_SIZE_CLASS_STATS

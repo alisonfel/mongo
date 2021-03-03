@@ -33,6 +33,44 @@ global:
 
 server_parameters:
 
+  tcmallocMaxTotalThreadCacheBytes:
+    description: "Configure tcmalloc's max_total_thread_cache_bytes"
+    set_at: [startup, runtime]
+    cpp_class:
+      name: TCMallocMaxTotalThreadCacheBytesServerParameter
+      override_set: true
+
+  tcmallocAggressiveMemoryDecommit:
+    description: "Configure tcmalloc's aggressive_memory_decommit"
+    set_at: [startup, runtime]
+    cpp_class:
+      name: TCMallocAggressiveMemoryDecommitServerParameter
+      override_set: true
+
+  heapProfilingEnabled:
+    description: "Enable Heap Profiling"
+    set_at: startup
+    cpp_vartype: bool
+    cpp_varname: HeapProfilingEnabled
+    default: false
+    condition:
+      preprocessor: defined(_POSIX_VERSION) && (defined(MONGO_CONFIG_HAVE_EXECINFO_BACKTRACE) || defined(MONGO_CONFIG_USE_LIBUNWIND))
+
+  heapProfilingSampleIntervalBytes:
+    description: "Configure heap profiling sample interval bytes"
+    set_at: startup
+    cpp_vartype: long long
+    cpp_varname: HeapProfilingSampleIntervalBytes
+    # 256kb
+    default: 262144
+    condition:
+      preprocessor: defined(_POSIX_VERSION) && (defined(MONGO_CONFIG_HAVE_EXECINFO_BACKTRACE) || defined(MONGO_CONFIG_USE_LIBUNWIND))
+
+  tcmallocEnableMarkThreadTemporarilyIdle:
+    description: 'REMOVED: Setting this parameter has no effect and it will be removed in a future version of MongoDB.'
+    set_at: [ startup, runtime ]
+    cpp_class: TCMallocEnableMarkThreadTemporarilyIdle
+
   tcmallocReleaseRate:
     description: "Configure tcmalloc_release_rate"
     set_at: [startup, runtime]
