@@ -298,6 +298,7 @@ if env['MONGO_ALLOCATOR'] in ['tcmalloc', 'tcmalloc-legacy', 'tcmalloc-experimen
             'tcmalloc_server_status_section.cpp',
             'tcmalloc_set_parameter.cpp',
             'tcmalloc_parameters.idl',
+            'tcmalloc_heap_profiler.cpp',
         ]
     else:
         tcmspEnv.Append(CPPDEFINES='MONGO_HAVE_GPERF_TCMALLOC')
