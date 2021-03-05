@@ -316,7 +316,7 @@ if env['MONGO_ALLOCATOR'] in ['tcmalloc', 'tcmalloc-legacy', 'tcmalloc-experimen
             'tcmalloc_gperf_server_status_section.cpp',
             'tcmalloc_gperf_set_parameter.cpp',
             'tcmalloc_gperf_parameters.idl',
-            'heap_profiler.cpp',
+            'tcmalloc_gperf_heap_profiler.cpp',
         ]
 
     if not use_system_version_of_library('valgrind'):
