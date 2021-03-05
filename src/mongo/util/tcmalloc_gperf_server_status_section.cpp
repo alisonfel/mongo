@@ -43,7 +43,7 @@
 #include "mongo/db/commands/server_status.h"
 #include "mongo/db/service_context.h"
 #include "mongo/transport/service_entry_point.h"
-#include "mongo/util/tcmalloc_parameters_gen.h"
+#include "mongo/util/tcmalloc_gperf_parameters_gen.h"
 
 namespace mongo {
 

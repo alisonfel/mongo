@@ -40,7 +40,7 @@
 #include "mongo/db/commands/server_status.h"
 #include "mongo/logv2/log.h"
 #include "mongo/util/stacktrace.h"
-#include "mongo/util/tcmalloc_parameters_gen.h"
+#include "mongo/util/tcmalloc_gperf_parameters_gen.h"
 
 #include <gperftools/malloc_hook.h>
 #include <third_party/murmurhash3/MurmurHash3.h>

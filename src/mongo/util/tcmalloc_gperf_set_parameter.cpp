@@ -44,7 +44,7 @@
 #include "mongo/db/jsobj.h"
 #include "mongo/util/processinfo.h"
 #include "mongo/util/str.h"
-#include "mongo/util/tcmalloc_parameters_gen.h"
+#include "mongo/util/tcmalloc_gperf_parameters_gen.h"
 
 namespace mongo {
 namespace {
