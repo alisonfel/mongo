@@ -74,6 +74,7 @@ private:
             numFrames = stackSample.depth;
             activeBytes = stackSample.sum;
 
+            // Generate a bson representation of our new stack.
             BSONArrayBuilder builder;
             std::string frameString;
             char buf[256];
@@ -142,7 +143,7 @@ private:
             // Compute backtrace hash of sample stack
             uint32_t stackHash = StackHash(sample);
             StackInfo* stackInfo = stackInfoMap[stackHash];
-            // If new stack, store in stackHashTable
+            // If this is a new stack, store in our stack map
             if (stackInfo == nullptr) {
                 stackInfo = new StackInfo(sample, stackInfoMap.size());
                 stackInfoMap[stackHash] = stackInfo;
@@ -159,6 +160,7 @@ private:
         auto newToken = tcmalloc::MallocExtension::StartAllocationProfiling();
         profileTokens.push_back(std::move(newToken));
 
+        // Sum all the allocations performed (of what we sampled)
         int64_t allocatedBytes = 0;
         allocProfile.Iterate(
             [&](const tcmalloc::Profile::Sample& sample) { allocatedBytes += sample.sum; });
