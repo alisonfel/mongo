@@ -78,9 +78,14 @@ private:
             std::string frameString;
             char buf[256];
             for (int i = 0; i < stackSample.depth; ++i) {
-                if (!absl::Symbolize(stackSample.stack[i], buf, sizeof(buf)))
-                    continue;
-                frameString.assign(buf);
+                if (!absl::Symbolize(stackSample.stack[i], buf, sizeof(buf))) {
+                    // Fall back to frameString as stringified `void*`.
+                    std::ostringstream s;
+                    s << stackSample.stack[i];
+                    frameString = s.str();
+                } else {
+                    frameString.assign(buf);
+                }
                 builder.append(frameString);
                 frameString.clear();
             }
