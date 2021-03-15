@@ -72,7 +72,6 @@ private:
         StackInfo(const tcmalloc::Profile::Sample& stackSample, int id) {
             stackNum = id;
             numFrames = stackSample.depth;
-            activeBytes = stackSample.sum;
 
             // Generate a bson representation of our new stack.
             BSONArrayBuilder builder;
@@ -137,6 +136,8 @@ private:
         // Get a live snapshot profile of the current heap usage
         int64_t totalActiveBytes = 0;
         std::vector<StackInfo*> stackInfos;
+        std::set<StackInfo*, bool (*)(StackInfo*, StackInfo*)> activeStacks{
+            [](StackInfo* a, StackInfo* b) -> bool { return a->stackNum < b->stackNum; }};
         auto heapProfile = tcmalloc::MallocExtension::SnapshotCurrent(tcmalloc::ProfileType::kHeap);
         heapProfile.Iterate([&](const tcmalloc::Profile::Sample& sample) {
             totalActiveBytes += sample.sum;
@@ -148,8 +149,14 @@ private:
                 stackInfo = new StackInfo(sample, stackInfoMap.size());
                 stackInfoMap[stackHash] = stackInfo;
             }
-            stackInfo->activeBytes = sample.sum;
-            stackInfos.push_back(stackInfo);
+            auto activeStackSearch = activeStacks.find(stackInfo);
+            if (activeStackSearch != activeStacks.end()) {
+                stackInfo->activeBytes += sample.sum;
+            } else {
+                activeStacks.insert(stackInfo);
+                stackInfos.push_back(stackInfo);
+                stackInfo->activeBytes = sample.sum;
+            }
         });
 
         // Get the series of allocation samples to this point
