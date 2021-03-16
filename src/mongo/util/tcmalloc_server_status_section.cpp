@@ -102,18 +102,27 @@ public:
                 tcmalloc::MallocExtension::GetNumericProperty("tcmalloc.thread_cache_free_bytes");
             absl::optional<size_t> cpu =
                 tcmalloc::MallocExtension::GetNumericProperty("tcmalloc.cpu_free");
-            if (central.has_value() && transfer.has_value() && thread.has_value() &&
-                cpu.has_value()) {
-                sub.appendNumber("total_free_bytes",
-                                 static_cast<long long>(central.value() + transfer.value() +
-                                                        thread.value() + cpu.value()));
+            long long total_free_bytes = 0;
+            if (central.has_value()) {
+                total_free_bytes += central.value();
             }
+            if (transfer.has_value()) {
+                total_free_bytes += transfer.value();
+            }
+            if (thread.has_value()) {
+                total_free_bytes += thread.value();
+            }
+            if (cpu.has_value()) {
+                total_free_bytes += cpu.value();
+            }
+            sub.appendNumber("total_free_bytes", total_free_bytes);
             appendNumericPropertyIfAvailable(
                 sub, "central_cache_free_bytes", "tcmalloc.central_cache_free");
             appendNumericPropertyIfAvailable(
                 sub, "transfer_cache_free_bytes", "tcmalloc.transfer_cache_free");
             appendNumericPropertyIfAvailable(
                 sub, "thread_cache_free_bytes", "tcmalloc.thread_cache_free");
+            appendNumericPropertyIfAvailable(sub, "cpu_cache_free_bytes", "tcmalloc.cpu_free");
 
             tcmalloc::MallocExtension::BytesPerSecond tcmallocReleaseRate =
                 tcmalloc::MallocExtension::GetBackgroundReleaseRate();
