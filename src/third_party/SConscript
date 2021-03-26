@@ -106,6 +106,16 @@ if not use_system_version_of_library('abseil-cpp'):
         'CPPPATH' : ['#/src/third_party/abseil-cpp-master/abseil-cpp' + abseilSuffix],
     }
 
+if not use_system_version_of_library('googletest'):
+    thirdPartyEnvironmentModifications['gtest'] = {
+        'CPPPATH' : [
+            '#/src/third_party/googletest/googletest/include',
+            '#/src/third_party/googletest/googletest',
+            '#/src/third_party/googletest/googlemock/include',
+            '#/src/third_party/googletest/googlemock',
+        ],
+    }
+
 if not use_system_version_of_library('snappy'):
     thirdPartyEnvironmentModifications['snappy'] = {
         'CPPPATH' : ['#/src/third_party/snappy' + snappySuffix],
@@ -365,6 +375,32 @@ else:
         ])
 
 abseilEnv.ShimLibrary(name="abseil")
+
+googletestEnv = env.Clone()
+
+# We can't depend on the allocator if we are using tcmalloc as its depends
+# on us (googletest)
+if googletestEnv['MONGO_ALLOCATOR'] in ['tcmalloc', 'tcmalloc-legacy']:
+    googletestEnv = googletestEnv.Clone(
+        LIBDEPS_NO_INHERIT=['$BUILD_DIR/third_party/shim_allocator']
+    )
+
+if use_system_version_of_library("googletest"):
+    googletestEnv = googletestEnv.Clone(
+        SYSLIBDEPS=[
+            env['LIBDEPS_GOOGLETEST_SYSLIBDEP'],
+        ])
+else:
+    googletestDirectory = 'googletest'
+    googletestEnv = googletestEnv.Clone()
+    googletestEnv.InjectThirdParty(libraries=['gtest'])
+    googletestEnv.SConscript(googletestDirectory + '/SConscript', exports={ 'env' : googletestEnv })
+    googletestEnv = googletestEnv.Clone(
+        LIBDEPS_INTERFACE=[
+            googletestDirectory + '/gtest',
+        ])
+
+googletestEnv.ShimLibrary(name="gtest")
 
 snappyEnv = env.Clone()
 if use_system_version_of_library("snappy"):

@@ -1,0 +1,53 @@
+# -*- mode: python -*-
+
+Import("env")
+
+env = env.Clone()
+
+env.InjectThirdParty(libraries=['abseil-cpp'])
+
+googletest_dir = env.Dir("googletest")
+googlemock_dir = env.Dir("googlemock")
+
+googletest_files = [
+    'src/gtest-death-test.cc',
+    'src/gtest-filepath.cc',
+    'src/gtest-matchers.cc',
+    'src/gtest-port.cc',
+    'src/gtest-printers.cc',
+    'src/gtest-test-part.cc',
+    'src/gtest-typed-test.cc',
+    'src/gtest.cc',
+]
+
+googlemock_files = [
+    'src/gmock-internal-utils.cc',
+    'src/gmock-spec-builders.cc',
+    'src/gmock-cardinalities.cc',
+    'src/gmock-matchers.cc',
+    'src/gmock.cc',
+]
+
+if not env.TargetOSIs('windows'):
+    env.Append(LIBS=['pthread'])
+
+env.Append(CPPDEFINES=["GTEST_HAS_ABSL"])
+
+env.Library(
+    target='gtest',
+    source=env.File(googletest_files, googletest_dir) + env.File(googlemock_files, googlemock_dir),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_debugging_failure_signal_handler',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_debugging_stacktrace',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_debugging_symbolize',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+    ],
+)
+
+env.Library(
+    target='gtest_main',
+    source=env.File(["src/gmock_main.cc"], googlemock_dir),
+    LIBDEPS=[
+        'gtest'
+    ],
+)

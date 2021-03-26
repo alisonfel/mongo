@@ -352,6 +352,7 @@ for pack in [
     ('stemmer',),
     ('tcmalloc',),
     ('tcmalloc-gperf',),
+    ('googletest',),
     ('libunwind',),
     ('valgrind',),
     ('wiredtiger',),
