@@ -132,6 +132,22 @@ env.Library(
     ),
 )
 
+env.Library(
+    target='tcmalloc_want_hpaa',
+    source=env.File(
+        ['want_hpaa.cc'],
+        tcmalloc_src_dir
+    ),
+)
+
+env.Library(
+    target='tcmalloc_want_no_hpaa',
+    source=env.File(
+        ['want_no_hpaa.cc'],
+        tcmalloc_src_dir
+    ),
+)
+
 tcmalloc_deps = [
     '$BUILD_DIR/third_party/abseil-cpp-master/absl_base',
     '$BUILD_DIR/third_party/abseil-cpp-master/absl_debugging_leak_check',
@@ -206,4 +222,470 @@ env.Library(
     target="tcmalloc_common",
     source=env.File(common_sources, tcmalloc_src_dir),
     LIBDEPS=common_deps,
+)
+
+# TCMalloc Unit test definitions
+
+env.Library(
+    target='tcmalloc_testutil',
+    source=env.File(
+        ['testing/testutil.cc'],
+        tcmalloc_src_dir
+    ),
+    LIBDEPS=[
+        'tcmalloc_malloc_extension'
+    ],
+)
+
+env.Library(
+    target='tcmalloc_empirical',
+    source=env.File(
+        ['testing/empirical.cc'],
+        tcmalloc_src_dir
+    ),
+    LIBDEPS=[
+
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_distributions',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_seed_sequences',
+        'tcmalloc_logging',
+    ],
+)
+
+env.Library(
+    target='tcmalloc_empirical_distributions',
+    source=env.File(
+        ['testing/empirical_distributions.cc'],
+        tcmalloc_src_dir
+    ),
+    LIBDEPS=[
+        'tcmalloc_empirical'
+    ],
+)
+
+env.InjectThirdParty(libraries=['benchmark', 'gtest'])
+
+test_deps = [
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_base',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_distributions',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_seed_sequences',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings_str_format',
+    '$BUILD_DIR/third_party/abseil-cpp-master/absl_synchronization',
+    '$BUILD_DIR/third_party/benchmark/benchmark',
+    '$BUILD_DIR/third_party/googletest/gtest',
+    'tcmalloc_logging',
+    'tcmalloc_malloc_extension',
+    'tcmalloc_testutil'
+]
+
+tcmalloc_test_obj = env.Object(
+    target='tcmalloc_test',
+    source=env.File(
+        ['testing/tcmalloc_test.cc'],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=test_deps,
+)
+
+env.Program(
+    target='tcmalloc_test_no_hp_aware',
+    source=[tcmalloc_test_obj],
+    LIBDEPS= test_deps + ['tcmalloc_want_no_hpaa'],
+)
+
+env.Program(
+    target='tcmalloc_test_hp_aware',
+    source=[tcmalloc_test_obj],
+    LIBDEPS= test_deps + ['tcmalloc_want_hpaa'],
+)
+
+env.Program(
+    target='threadcachesize_test',
+    source=env.File(
+        ['testing/threadcachesize_test.cc'],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_synchronization',
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+        'tcmalloc_testutil',
+    ],
+)
+
+env.Program(
+    target='memalign_test',
+    source=env.File(
+        ['testing/memalign_test.cc'],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_distributions',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_seed_sequences',
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+        'tcmalloc_testutil',
+    ],
+)
+
+env.Program(
+    target='frag_test',
+    source=env.File(
+        ['testing/frag_test.cc'],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_seed_sequences',
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+    ],
+)
+
+env.Program(
+    target='outofmemory_test',
+    source=env.File(
+        ['testing/outofmemory_test.cc'],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+        'tcmalloc_testutil',
+    ],
+)
+
+env.Program(
+    target='current_allocated_bytes_test',
+    source=env.File(
+        ['testing/current_allocated_bytes_test.cc'],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_base',
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        'tcmalloc',
+    ],
+)
+
+env.Program(
+    target='sampling_test',
+    source=env.File(
+        ['testing/sampling_test.cc'],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_base',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_debugging_symbolize',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+        'tcmalloc_testutil',
+    ],
+)
+
+env.Program(
+    target='sampling_memusage_test',
+    source=env.File(
+        ['testing/sampling_memusage_test.cc'],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_base',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        '$BUILD_DIR/third_party/googletest/gtest',
+        'tcmalloc',
+    ],
+)
+
+env.Program(
+    target='sampler_test',
+    source=env.File(
+        ['testing/sampler_test.cc'],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+        'tcmalloc_testutil',
+    ],
+)
+
+env.Program(
+    target='startup_size_test',
+    source=env.File(
+        ['testing/startup_size_test.cc'],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_base',
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+    ],
+)
+
+env.Program(
+    target='large_alloc_size_test',
+    source=env.File(
+        ['testing/large_alloc_size_test.cc'],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+    ],
+)
+
+env.Program(
+    target='thread_ctor_test',
+    source=env.File(
+        [
+            'testing/thread_ctor_test.cc',
+            'testing/thread_ctor_test_lib.cc'
+        ],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+    ],
+)
+
+env.Program(
+    target='sample_size_class_test',
+    source=env.File(
+        [
+            'testing/sample_size_class_test.cc',
+        ],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+    ],
+)
+
+env.Program(
+    target='no_deps_test',
+    source=env.File(
+        [
+            'testing/no_deps_test.cc',
+        ],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        'tcmalloc',
+    ],
+)
+
+env.Program(
+    target='empirical_test',
+    source=env.File(
+        [
+            'testing/empirical_test.cc',
+        ],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_distributions',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+        'tcmalloc_empirical',
+        'tcmalloc_testutil',
+    ],
+)
+
+env.Program(
+    target='empirical_distributions_test',
+    source=env.File(
+        [
+            'testing/empirical_distributions_test.cc',
+        ],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_distributions',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_seed_sequences',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+        'tcmalloc_empirical_distributions',
+    ],
+)
+
+env.Program(
+    target='empirical_driver',
+    source=env.File(
+        [
+            'testing/empirical_driver.cc',
+        ],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_base',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_flags_flag',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_flags_parse',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_distributions',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_synchronization',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_time',
+        'tcmalloc',
+        'tcmalloc_empirical',
+        'tcmalloc_empirical_distributions',
+        'tcmalloc_testutil',
+        'tcmalloc_want_hpaa',
+    ],
+)
+
+tcmalloc_limit_test_obj = env.Object(
+    target='limit_test.o',
+    source=env.File(
+        [
+            'testing/limit_test.cc',
+        ],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_flags_flag',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+        'tcmalloc_testutil',
+        'tcmalloc_want_no_hpaa',
+    ],
+)
+
+env.Program(
+    target='limit_test',
+    source=[tcmalloc_limit_test_obj],
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_flags_flag',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+        'tcmalloc_testutil',
+        'tcmalloc_want_no_hpaa',
+    ],
+)
+
+env.Program(
+    target='limit_test_hpaa',
+    source=[tcmalloc_limit_test_obj],
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_flags_flag',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+        'tcmalloc_testutil',
+        'tcmalloc_want_hpaa',
+    ],
+)
+
+env.Program(
+    target='aligned_new_test',
+    source=env.File(
+        [
+            'testing/aligned_new_test.cc',
+        ],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_base',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_container',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+    ],
+)
+
+env.Program(
+    target='memory_errors_test',
+    source=env.File(
+        [
+            'testing/memory_errors_test.cc',
+        ],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+    ],
+)
+
+env.Program(
+    target='get_stats_test',
+    source=env.File(
+        [
+            'testing/get_stats_test.cc',
+        ],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        '$BUILD_DIR/third_party/googletest/gtest_main',
+        'tcmalloc',
+        'tcmalloc_testutil',
+    ],
+)
+
+env.Program(
+    target='releasing_test',
+    source=env.File(
+        [
+            'testing/releasing_test.cc',
+        ],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_distributions',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_seed_sequences',
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        '$BUILD_DIR/third_party/googletest/gtest',
+        'tcmalloc',
+        'tcmalloc_want_hpaa',
+    ],
+)
+
+env.Program(
+    target='default_parameters_test',
+    source=env.File(
+        [
+            'testing/default_parameters_test.cc',
+        ],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        'tcmalloc',
+    ],
+)
+
+env.Program(
+    target='hello_main_test',
+    source=env.File(
+        [
+            'testing/hello_main.cc',
+        ],
+        tcmalloc_src_dir,
+    ),
+    LIBDEPS=[
+        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
+        '$BUILD_DIR/third_party/benchmark/benchmark',
+        'tcmalloc',
+    ],
 )
