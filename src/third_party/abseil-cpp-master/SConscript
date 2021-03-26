@@ -154,6 +154,27 @@ env.Library(
     LIBDEPS=["absl_base"],
 )
 
+env.Library(
+    target="absl_debugging_examine_stack",
+    source=env.File(["internal/examine_stack.cc"], abseil_debugging_dir),
+    LIBDEPS=[
+        "absl_base_raw_logging_internal",
+        "absl_debugging_stacktrace",
+        "absl_debugging_symbolize",
+    ],
+)
+
+env.Library(
+    target="absl_debugging_failure_signal_handler",
+    source=env.File(["failure_signal_handler.cc"], abseil_debugging_dir),
+    LIBDEPS=[
+        "absl_base",
+        "absl_base_raw_logging_internal",
+        "absl_debugging_examine_stack",
+        "absl_debugging_stacktrace",
+    ],
+)
+
 abseil_memory_dir = abseil_root.Dir("memory")
 env.Append(CPPPATH=[abseil_memory_dir])
 
@@ -330,5 +351,228 @@ abseil_type_env.Library(
     source=env.File(["bad_optional_access.cc"], abseil_types_dir),
     LIBDEPS=[
         "absl_base",
+    ]
+)
+
+abseil_random_dir = abseil_root.Dir("random")
+abseil_random_env = env.Clone()
+env.Append(CPPPATH=
+    [
+        abseil_random_dir,
+    ]
+)
+
+env.Library(
+    target="absl_random_seed_sequences",
+    source=env.File(
+        ['seed_sequences.cc', 'seed_gen_exception.cc'],
+        abseil_random_dir,
+    ),
+    LIBDEPS=[
+        "absl_random_internal_pool_urbg",
+        "absl_strings",
+    ]
+)
+
+env.Library(
+    target="absl_random_distributions",
+    source=env.File(
+        ['discrete_distribution.cc', 'gaussian_distribution.cc'],
+        abseil_random_dir,
+    ),
+    LIBDEPS=[
+        "absl_strings",
+    ]
+)
+
+env.Library(
+    target="absl_random_seed_material",
+    source=env.File(
+        ['internal/seed_material.cc'],
+        abseil_random_dir,
+    ),
+    LIBDEPS=[
+        "absl_base_raw_logging_internal",
+        "absl_strings",
+    ]
+)
+
+env.Library(
+    target="absl_random_internal_pool_urbg",
+    source=env.File(
+        ['internal/pool_urbg.cc'],
+        abseil_random_dir,
+    ),
+    LIBDEPS=[
+        "absl_random_internal_randem",
+        "absl_random_seed_material",
+    ]
+)
+
+env.Library(
+    target="absl_random_internal_randem",
+    source=env.File(
+        [
+            'internal/randen.cc',
+            'internal/randen_slow.cc',
+            'internal/randen_detect.cc',
+            'internal/randen_hwaes.cc',
+            'internal/randen_round_keys.cc',
+        ],
+        abseil_random_dir,
+    ),
+    LIBDEPS=[
+        "absl_base_raw_logging_internal",
+    ]
+)
+
+abseil_flags_dir = abseil_root.Dir("flags")
+abseil_flags_env = env.Clone()
+
+env.Library(
+    target="absl_flags_private_handle_accessor",
+    source=env.File(
+        [
+            'internal/private_handle_accessor.cc',
+        ],
+        abseil_flags_dir,
+    ),
+    LIBDEPS=[
+        "absl_flags_commandlineflag",
+        "absl_strings",
+    ]
+)
+
+env.Library(
+    target="absl_flags_reflection",
+    source=env.File(
+        [
+            'reflection.cc',
+        ],
+        abseil_flags_dir,
+    ),
+    LIBDEPS=[
+        "absl_container",
+        "absl_flags_commandlineflag",
+        "absl_flags_private_handle_accessor",
+        "absl_strings",
+        "absl_synchronization",
+    ]
+)
+
+env.Library(
+    target="absl_flags_commandlineflag",
+    source=env.File(
+        [
+            'commandlineflag.cc',
+            'internal/commandlineflag.cc',
+        ],
+        abseil_flags_dir,
+    ),
+    LIBDEPS=[
+        "absl_strings",
+    ]
+)
+
+env.Library(
+    target="absl_flags_marshalling",
+    source=env.File(
+        [
+            'marshalling.cc',
+        ],
+        abseil_flags_dir,
+    ),
+    LIBDEPS=[
+        "absl_strings",
+    ]
+)
+
+env.Library(
+    target="absl_flags_program_name",
+    source=env.File(
+        [
+            'internal/program_name.cc',
+        ],
+        abseil_flags_dir,
+    ),
+    LIBDEPS=[
+        "absl_strings",
+        "absl_synchronization",
+    ]
+)
+
+env.Library(
+    target="absl_flags_config",
+    source=env.File(
+        [
+            'usage_config.cc',
+        ],
+        abseil_flags_dir,
+    ),
+    LIBDEPS=[
+        "absl_flags_program_name",
+        "absl_strings",
+        "absl_synchronization",
+    ]
+)
+
+env.Library(
+    target="absl_flags_usage",
+    source=env.File(
+        [
+            'usage.cc',
+            'internal/usage.cc',
+        ],
+        abseil_flags_dir,
+    ),
+    LIBDEPS=[
+        "absl_flags_commandlineflag",
+        "absl_flags_config",
+        "absl_flags_flag",
+        "absl_flags_private_handle_accessor",
+        "absl_flags_program_name",
+        "absl_flags_reflection",
+        "absl_strings",
+        "absl_synchronization",
+    ]
+)
+
+env.Library(
+    target="absl_flags_flag",
+    source=env.File(
+        [
+            'flag.cc',
+            'internal/flag.cc',
+        ],
+        abseil_flags_dir,
+    ),
+    LIBDEPS=[
+        "absl_base",
+        "absl_flags_commandlineflag",
+        "absl_flags_config",
+        "absl_flags_marshalling",
+        "absl_flags_reflection",
+        "absl_strings",
+        "absl_synchronization",
+    ]
+)
+
+env.Library(
+    target="absl_flags_parse",
+    source=env.File(
+        [
+            'parse.cc',
+        ],
+        abseil_flags_dir,
+    ),
+    LIBDEPS=[
+        "absl_flags_commandlineflag",
+        "absl_flags_flag",
+        "absl_flags_private_handle_accessor",
+        "absl_flags_program_name",
+        "absl_flags_reflection",
+        "absl_flags_usage",
+        "absl_strings",
+        "absl_synchronization",
     ]
 )
