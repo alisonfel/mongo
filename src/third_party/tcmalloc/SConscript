@@ -224,9 +224,28 @@ env.Library(
     LIBDEPS=common_deps,
 )
 
-# TCMalloc Unit test definitions
+# TCMalloc Test definitions
 
-env.Library(
+test_env = env.Clone()
+
+def create_tcmalloc_test(env, target, source, **kwargs):
+    tc_test = env.Program(
+        target=target,
+        source=source,
+        **kwargs
+    )
+    tc_command = env.Command(
+        target=f"#+tc_{target}",
+        source=tc_test[0],
+        action="${SOURCES[0]}",
+    )
+    env.Alias('tcmalloc-testsuite-exec', tc_command)
+    env.Alias('tcmalloc-testsuite', tc_test[0])
+    return tc_test
+
+test_env.AddMethod(create_tcmalloc_test, "TCMallocTest")
+
+test_env.Library(
     target='tcmalloc_testutil',
     source=env.File(
         ['testing/testutil.cc'],
@@ -237,7 +256,7 @@ env.Library(
     ],
 )
 
-env.Library(
+test_env.Library(
     target='tcmalloc_empirical',
     source=env.File(
         ['testing/empirical.cc'],
@@ -251,7 +270,7 @@ env.Library(
     ],
 )
 
-env.Library(
+test_env.Library(
     target='tcmalloc_empirical_distributions',
     source=env.File(
         ['testing/empirical_distributions.cc'],
@@ -262,7 +281,7 @@ env.Library(
     ],
 )
 
-env.InjectThirdParty(libraries=['benchmark', 'gtest'])
+test_env.InjectThirdParty(libraries=['benchmark', 'gtest'])
 
 test_deps = [
     '$BUILD_DIR/third_party/abseil-cpp-master/absl_base',
@@ -278,7 +297,7 @@ test_deps = [
     'tcmalloc_testutil'
 ]
 
-tcmalloc_test_obj = env.Object(
+tcmalloc_test_obj = test_env.Object(
     target='tcmalloc_test',
     source=env.File(
         ['testing/tcmalloc_test.cc'],
@@ -287,19 +306,19 @@ tcmalloc_test_obj = env.Object(
     LIBDEPS=test_deps,
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='tcmalloc_test_no_hp_aware',
     source=[tcmalloc_test_obj],
     LIBDEPS= test_deps + ['tcmalloc_want_no_hpaa'],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='tcmalloc_test_hp_aware',
     source=[tcmalloc_test_obj],
     LIBDEPS= test_deps + ['tcmalloc_want_hpaa'],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='threadcachesize_test',
     source=env.File(
         ['testing/threadcachesize_test.cc'],
@@ -314,7 +333,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='memalign_test',
     source=env.File(
         ['testing/memalign_test.cc'],
@@ -330,7 +349,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='frag_test',
     source=env.File(
         ['testing/frag_test.cc'],
@@ -344,7 +363,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='outofmemory_test',
     source=env.File(
         ['testing/outofmemory_test.cc'],
@@ -357,7 +376,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='current_allocated_bytes_test',
     source=env.File(
         ['testing/current_allocated_bytes_test.cc'],
@@ -370,7 +389,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='sampling_test',
     source=env.File(
         ['testing/sampling_test.cc'],
@@ -387,7 +406,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='sampling_memusage_test',
     source=env.File(
         ['testing/sampling_memusage_test.cc'],
@@ -402,7 +421,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='sampler_test',
     source=env.File(
         ['testing/sampler_test.cc'],
@@ -417,7 +436,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='startup_size_test',
     source=env.File(
         ['testing/startup_size_test.cc'],
@@ -431,7 +450,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='large_alloc_size_test',
     source=env.File(
         ['testing/large_alloc_size_test.cc'],
@@ -444,7 +463,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='thread_ctor_test',
     source=env.File(
         [
@@ -458,7 +477,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='sample_size_class_test',
     source=env.File(
         [
@@ -473,7 +492,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='no_deps_test',
     source=env.File(
         [
@@ -487,7 +506,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='empirical_test',
     source=env.File(
         [
@@ -506,7 +525,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='empirical_distributions_test',
     source=env.File(
         [
@@ -525,7 +544,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='empirical_driver',
     source=env.File(
         [
@@ -549,7 +568,7 @@ env.Program(
     ],
 )
 
-tcmalloc_limit_test_obj = env.Object(
+tcmalloc_limit_test_obj = test_env.Object(
     target='limit_test.o',
     source=env.File(
         [
@@ -567,7 +586,7 @@ tcmalloc_limit_test_obj = env.Object(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='limit_test',
     source=[tcmalloc_limit_test_obj],
     LIBDEPS=[
@@ -580,7 +599,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='limit_test_hpaa',
     source=[tcmalloc_limit_test_obj],
     LIBDEPS=[
@@ -593,7 +612,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='aligned_new_test',
     source=env.File(
         [
@@ -611,7 +630,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='memory_errors_test',
     source=env.File(
         [
@@ -626,7 +645,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='get_stats_test',
     source=env.File(
         [
@@ -642,7 +661,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='releasing_test',
     source=env.File(
         [
@@ -661,7 +680,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='default_parameters_test',
     source=env.File(
         [
@@ -675,7 +694,7 @@ env.Program(
     ],
 )
 
-env.Program(
+test_env.TCMallocTest(
     target='hello_main_test',
     source=env.File(
         [
