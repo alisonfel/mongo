@@ -544,30 +544,6 @@ test_env.TCMallocTest(
     ],
 )
 
-test_env.TCMallocTest(
-    target='empirical_driver',
-    source=env.File(
-        [
-            'testing/empirical_driver.cc',
-        ],
-        tcmalloc_src_dir,
-    ),
-    LIBDEPS=[
-        '$BUILD_DIR/third_party/abseil-cpp-master/absl_base',
-        '$BUILD_DIR/third_party/abseil-cpp-master/absl_flags_flag',
-        '$BUILD_DIR/third_party/abseil-cpp-master/absl_flags_parse',
-        '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_distributions',
-        '$BUILD_DIR/third_party/abseil-cpp-master/absl_strings',
-        '$BUILD_DIR/third_party/abseil-cpp-master/absl_synchronization',
-        '$BUILD_DIR/third_party/abseil-cpp-master/absl_time',
-        'tcmalloc',
-        'tcmalloc_empirical',
-        'tcmalloc_empirical_distributions',
-        'tcmalloc_testutil',
-        'tcmalloc_want_hpaa',
-    ],
-)
-
 tcmalloc_limit_test_obj = test_env.Object(
     target='limit_test.o',
     source=env.File(
