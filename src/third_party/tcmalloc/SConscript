@@ -227,20 +227,16 @@ env.Library(
 # TCMalloc Test definitions
 
 test_env = env.Clone()
+test_env['TEST_EXECUTION_SUFFIX_BLACKLIST'] = '.o'
 
 def create_tcmalloc_test(env, target, source, **kwargs):
     tc_test = env.Program(
         target=target,
         source=source,
+        AIB_COMPONENT='tcmalloc',
         **kwargs
     )
-    tc_command = env.Command(
-        target=f"#+tc_{target}",
-        source=tc_test[0],
-        action="${SOURCES[0]}",
-    )
-    env.Alias('tcmalloc-testsuite-exec', tc_command)
-    env.Alias('tcmalloc-testsuite', tc_test[0])
+    env.RegisterTest("$UNITTEST_LIST", tc_test[0])
     return tc_test
 
 test_env.AddMethod(create_tcmalloc_test, "TCMallocTest")
@@ -263,7 +259,6 @@ test_env.Library(
         tcmalloc_src_dir
     ),
     LIBDEPS=[
-
         '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_distributions',
         '$BUILD_DIR/third_party/abseil-cpp-master/absl_random_seed_sequences',
         'tcmalloc_logging',
